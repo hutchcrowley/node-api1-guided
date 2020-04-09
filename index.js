@@ -30,6 +30,8 @@ const db = require('./database.js')
 
 const server = express()
 
+server.use(express.json())
+
 // define a route using express' built=in routing
 // now we can create specific route handlers for every needed endpoint
 server.get('/', (req, res) => {
@@ -40,13 +42,6 @@ server.get('/', (req, res) => {
 server.get('/users', (req, res) => {
   const users = db.getUsers()
   res.json(users)
-})
-
-server.post('/users', (req, res) => {
-  const newUser = db.createUser({
-    name: 'Bill Doe Baggins'
-  })
-  res.json(newUser)
 })
 
 // get a specific user by id  (in URL)
@@ -63,12 +58,46 @@ server.get('/users/:id', (req, res) => {
   }
 })
 
-// endpoint to create a new thing
+// endpoint for creating a new resource
 server.post('/users', (req, res) => {
+  if (!req.body.name) {
+    res.status(400).json({
+      message: 'User not created'
+    })
+  }
   const newUser = db.createUser({
-    name: 'Bob Doe'
+    name: req.body.name
   })
   res.status(201).json(newUser)
+})
+
+// endpoint to update a resource
+server.put('/users/:id', (req, res) => {
+  const user = db.getUserById(req.params.id)
+  if (user) {
+    const updatedUser = db.updateUser(user.id, {
+      name: req.body.name || user.name
+    })
+    res.json(updatedUser)
+  } else {
+    res.status(400).json({
+      message: 'User not found - cannot update'
+    })
+  }
+})
+
+server.delete('/users/:id', (req, res) => {
+  const user = db.getUserById(req.params.id)
+
+  if (user) {
+    db.deleteUser(user.id)
+    // respond with a 204, which is a successful empty response
+    res.status(204).end()
+  } else {
+    res.status(404).json({
+      message: 'User not found - cannot delete'
+    })
+  }
 })
 
 server.listen(3000, () => {
